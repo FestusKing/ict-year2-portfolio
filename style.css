@@ -1,0 +1,184 @@
+/* ===========================================
+   CSS VARIABLEN (Farben & Werte zentral definiert)
+   So kannst du das ganze Design an einer Stelle ändern.
+   =========================================== */
+:root {
+  --bg: #101012;
+  --bg-card: #17171a;
+  --bg-card-hover: #1e1e22;
+  --text-main: #eeeeee;
+  --text-muted: #9a9a9f;
+  --accent: #ff6a3d;
+  --border: #2a2a2e;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+/* Grundeinstellungen zurücksetzen */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text-main);
+  font-family: var(--font-display);
+  line-height: 1.6;
+}
+
+/* ===== HEADER ===== */
+.site-header {
+  border-bottom: 1px solid var(--border);
+  padding: 48px 24px 32px;
+}
+
+.header-inner {
+  max-width: 780px;
+  margin: 0 auto;
+}
+
+.site-title {
+  font-size: 2rem;
+  font-weight: 700;
+}
+
+.site-subtitle {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  margin-top: 6px;
+}
+
+/* ===== ENTRY LIST ===== */
+.entry-list {
+  max-width: 780px;
+  margin: 40px auto;
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.entry-card {
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.entry-card:hover,
+.entry-card:focus-visible {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+  outline: none;
+}
+
+.entry-number {
+  font-family: var(--font-mono);
+  color: var(--accent);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.entry-card-body {
+  flex: 1;
+}
+
+.entry-card-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.entry-card-teaser {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.entry-card-date {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  flex-shrink: 0;
+}
+
+/* ===== ENTRY DETAIL ===== */
+.entry-detail {
+  max-width: 780px;
+  margin: 40px auto;
+  padding: 0 24px 60px;
+}
+
+.entry-detail.hidden {
+  display: none;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-bottom: 24px;
+}
+
+.back-button:hover {
+  text-decoration: underline;
+}
+
+.detail-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.detail-date {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 24px;
+}
+
+.detail-body p {
+  margin-bottom: 16px;
+}
+
+.detail-sources {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.detail-sources strong {
+  color: var(--text-main);
+}
+
+/* ===== FOOTER ===== */
+.site-footer {
+  text-align: center;
+  padding: 30px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+/* ===== RESPONSIVE (Mobile) ===== */
+@media (max-width: 600px) {
+  .entry-card {
+    flex-wrap: wrap;
+  }
+  .entry-card-date {
+    order: 3;
+  }
+}

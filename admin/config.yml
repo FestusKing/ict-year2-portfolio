@@ -1,0 +1,21 @@
+backend:
+  name: github
+  repo: FestusKing/ict-year2-portfolio  # dein GitHub-Benutzername/Repo-Name
+  branch: main
+  base_url: https://api.netlify.com     # Netlify übernimmt nur den Login, nicht das Hosting
+
+media_folder: "images"   # Ordner für hochgeladene Bilder (optional nutzbar)
+
+collections:
+  - name: "entries"
+    label: "Portfolio Einträge"
+    folder: "data/entries"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Titel", name: "title", widget: "string" }
+      - { label: "Datum", name: "date", widget: "string", hint: "Format: TT.MM.JJJJ" }
+      - { label: "Teaser (kurze Vorschau)", name: "teaser", widget: "string" }
+      - { label: "Text", name: "body", widget: "text", hint: "Leerzeile = neuer Absatz" }
+      - { label: "Quellen", name: "sources", widget: "list", default: [] }
+      - { label: "KI-Einsatz", name: "aiUsage", widget: "text", default: "" }

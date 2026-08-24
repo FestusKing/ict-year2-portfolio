@@ -1,5 +1,5 @@
 backend:
-  name: github
+  name: git-gateway
   repo: FestusKing/ict-year2-portfolio  # dein GitHub-Benutzername/Repo-Name
   branch: main
   base_url: https://api.netlify.com     # Netlify übernimmt nur den Login, nicht das Hosting

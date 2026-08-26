@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Andrej König — ICT Year 2 Portfolio</title>
+
+  <!-- Google Fonts, damit Space Grotesk / IBM Plex Mono aus style.css wirklich geladen werden -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googDleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="header-inner">
+      <h1 class="site-title">ICT Year 2 Portfolio</h1>
+      <p class="site-subtitle">Andrej König — TBZ ICT-Fachmann EFZ</p>
+    </div>
+  </header>
+
+  <main>
+    <!-- Diese ID braucht script.js -> renderEntryList() füllt sie automatisch -->
+    <section id="entry-list" class="entry-list"></section>
+
+    <!-- Diese Section ist am Anfang versteckt (siehe .hidden in style.css) -->
+    <section id="entry-detail" class="entry-detail hidden">
+      <button id="back-button" class="back-button">&larr; Zurück zur Übersicht</button>
+      <div id="entry-detail-content"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>&copy; 2026 Andrej König</p>
+  </footer>
+
+  <!-- Nur noch EIN Script nötig: script.js lädt die Einträge jetzt selbst über die GitHub API -->
+  <script src="script.js"></script>
+
+</body>
+</html>

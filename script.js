@@ -1,8 +1,13 @@
 // ===========================================
 // script.js
-// Baut die Übersichtsliste aus portfolioEntries (aus entries.js)
-// und zeigt bei Klick den vollen Eintrag an.
+// Lädt Portfolio-Einträge dynamisch aus data/entries/*.json (via GitHub API),
+// baut die Übersichtsliste und zeigt bei Klick den vollen Eintrag an.
 // ===========================================
+
+// GitHub API URL, die den Inhalt des Ordners data/entries/ zurückgibt
+// (Liste aller Dateien mit Namen + Download-Link)
+const GITHUB_API_URL =
+  "https://api.github.com/repos/FestusKing/ict-year2-portfolio/contents/data/entries";
 
 // Referenzen auf die wichtigen HTML-Elemente holen
 const listSection = document.getElementById("entry-list");
@@ -10,9 +15,56 @@ const detailSection = document.getElementById("entry-detail");
 const detailContent = document.getElementById("entry-detail-content");
 const backButton = document.getElementById("back-button");
 
+// Hier landen die geladenen Einträge (am Anfang leer)
+let portfolioEntries = [];
+
+// ---- 0. Einträge von GitHub laden ----
+async function loadEntries() {
+  listSection.innerHTML = `<p style="color:var(--text-muted)">Lade Einträge…</p>`;
+
+  try {
+    // Schritt 1: Liste aller Dateien im Ordner data/entries/ holen
+    const listResponse = await fetch(GITHUB_API_URL);
+    if (!listResponse.ok) {
+      throw new Error(`GitHub API antwortete mit Status ${listResponse.status}`);
+    }
+    const files = await listResponse.json();
+
+    // Schritt 2: Nur .json Dateien behalten (falls z.B. ein Screenshot im Ordner landet)
+    const jsonFiles = files.filter((file) => file.name.endsWith(".json"));
+
+    // Schritt 3: Jede Datei einzeln herunterladen und als JSON parsen
+    // Promise.all lädt alle gleichzeitig statt nacheinander (schneller)
+    portfolioEntries = await Promise.all(
+      jsonFiles.map((file) => fetch(file.download_url).then((res) => res.json()))
+    );
+
+    // Schritt 4: Neueste zuerst anzeigen
+    portfolioEntries.sort((a, b) => parseGermanDate(b.date) - parseGermanDate(a.date));
+
+    // Schritt 5: Liste anzeigen
+    renderEntryList();
+  } catch (error) {
+    // Falls z.B. das GitHub API Rate Limit erreicht ist oder keine Internetverbindung besteht
+    listSection.innerHTML = `<p style="color:var(--accent)">Einträge konnten nicht geladen werden (${error.message}).</p>`;
+    console.error("Fehler beim Laden der Einträge:", error);
+  }
+}
+
+// Wandelt "18.08.2026" (TT.MM.JJJJ) in ein echtes Date-Objekt um, zum Sortieren
+function parseGermanDate(dateStr) {
+  const [day, month, year] = dateStr.split(".");
+  return new Date(`${year}-${month}-${day}`);
+}
+
 // ---- 1. Übersichtsliste aufbauen ----
 function renderEntryList() {
   listSection.innerHTML = ""; // vorherigen Inhalt leeren
+
+  if (portfolioEntries.length === 0) {
+    listSection.innerHTML = `<p style="color:var(--text-muted)">Noch keine Einträge vorhanden.</p>`;
+    return;
+  }
 
   portfolioEntries.forEach((entry, index) => {
     // Nummer formatieren: 1 -> "01", 2 -> "02", usw.
@@ -46,13 +98,17 @@ function renderEntryList() {
 
 // ---- 2. Detailansicht für einen Eintrag anzeigen ----
 function showEntryDetail(entry) {
-  // Absätze aus body-Array in <p>-Tags umwandeln
-  const bodyHtml = entry.body.map(paragraph => `<p>${paragraph}</p>`).join("");
+  // WICHTIG: body kommt aus dem CMS als EIN String mit Leerzeilen zwischen Absätzen
+  // (z.B. "Erster Absatz.\n\nZweiter Absatz."), nicht als Array.
+  // Deshalb hier zuerst bei Leerzeilen aufsplitten:
+  const paragraphs = entry.body.split(/\n\s*\n/);
+  const bodyHtml = paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join("");
 
   // Quellen-Liste bauen (falls vorhanden)
-  const sourcesHtml = entry.sources && entry.sources.length
-    ? `<ul>${entry.sources.map(s => `<li>${s}</li>`).join("")}</ul>`
-    : `<p>Keine externen Quellen verwendet.</p>`;
+  const sourcesHtml =
+    entry.sources && entry.sources.length
+      ? `<ul>${entry.sources.map((s) => `<li>${s}</li>`).join("")}</ul>`
+      : `<p>Keine externen Quellen verwendet.</p>`;
 
   detailContent.innerHTML = `
     <h2 class="detail-title">${entry.title}</h2>
@@ -79,5 +135,5 @@ backButton.addEventListener("click", () => {
   listSection.classList.remove("hidden");
 });
 
-// ---- 4. Beim Laden der Seite: Liste anzeigen ----
-renderEntryList();
+// ---- 4. Beim Laden der Seite: Einträge von GitHub holen ----
+loadEntries();

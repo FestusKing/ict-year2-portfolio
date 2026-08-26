@@ -10,7 +10,7 @@
   <link href="https://fonts.googDleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="style.css">
-</head>
+</head> <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <body>
 
   <header class="site-header">
@@ -37,6 +37,16 @@
 
   <!-- Nur noch EIN Script nötig: script.js lädt die Einträge jetzt selbst über die GitHub API -->
   <script src="script.js"></script>
-
+  <script>
+  if (window.netlifyIdentity) {
+    window.netlifyIdentity.on("init", user => {
+      if (!user) {
+        window.netlifyIdentity.on("login", () => {
+          document.location.reload();
+        });
+      }
+    });
+  }
+</script>
 </body>
 </html>

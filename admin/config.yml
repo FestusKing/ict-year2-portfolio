@@ -2,7 +2,7 @@ backend:
   name: github
   repo: FestusKing/ict-year2-portfolio  # dein GitHub-Benutzername/Repo-Name
   branch: main
-  base_url: https://api.netlify.com     # Netlify übernimmt nur den Login, nicht das Hosting
+  base_url:  https://netlify-cms-github-oauth-provider-1yhz.onrender.com    # Netlify übernimmt nur den Login, nicht das Hosting
 
 media_folder: "images"   # Ordner für hochgeladene Bilder (optional nutzbar)
 

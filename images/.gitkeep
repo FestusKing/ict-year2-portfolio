@@ -1,0 +1,3 @@
+Dieser Ordner ist das Medienverzeichnis fuer das CMS (media_folder in admin/config.yml).
+Hochgeladene Bilder landen hier automatisch. Die Datei sorgt nur dafuer,
+dass der Ordner in Git existiert -- du kannst sie loeschen, sobald das erste Bild drin ist.

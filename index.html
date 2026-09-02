@@ -4,13 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Andrej König — ICT Year 2 Portfolio</title>
+  <meta name="description" content="ICT English Year 2 Portfolio von Andrej König, TBZ Zürich.">
 
   <!-- Google Fonts, damit Space Grotesk / IBM Plex Mono aus style.css wirklich geladen werden -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googDleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
 
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css">
-</head> <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
 <body>
 
   <header class="site-header">
@@ -21,12 +24,15 @@
   </header>
 
   <main>
-    <!-- Diese ID braucht script.js -> renderEntryList() füllt sie automatisch -->
+    <!-- Kurz-Vorstellung: wird von script.js aus data/about.json gefüllt -->
+    <section id="intro" class="intro" hidden></section>
+
+    <!-- Übersichtsliste: wird von script.js -> renderEntryList() gefüllt -->
     <section id="entry-list" class="entry-list"></section>
 
-    <!-- Diese Section ist am Anfang versteckt (siehe .hidden in style.css) -->
+    <!-- Detailansicht: am Anfang versteckt (siehe .hidden in style.css) -->
     <section id="entry-detail" class="entry-detail hidden">
-      <button id="back-button" class="back-button">&larr; Zurück zur Übersicht</button>
+      <button id="back-button" class="back-button" type="button">&larr; Zurück zur Übersicht</button>
       <div id="entry-detail-content"></div>
     </section>
   </main>
@@ -35,18 +41,8 @@
     <p>&copy; 2026 Andrej König</p>
   </footer>
 
-  <!-- Nur noch EIN Script nötig: script.js lädt die Einträge jetzt selbst über die GitHub API -->
+  <!-- Markdown-Renderer, lokal im Repo (kein CDN -> funktioniert auch im Schulnetz) -->
+  <script src="vendor/marked.min.js"></script>
   <script src="script.js"></script>
-  <script>
-  if (window.netlifyIdentity) {
-    window.netlifyIdentity.on("init", user => {
-      if (!user) {
-        window.netlifyIdentity.on("login", () => {
-          document.location.reload();
-        });
-      }
-    });
-  }
-</script>
 </body>
 </html>

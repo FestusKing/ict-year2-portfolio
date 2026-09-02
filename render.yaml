@@ -1,0 +1,26 @@
+# ===========================================
+# Render Blueprint
+# Beschreibt, wie Render diese Seite baut und ausliefert.
+#
+# Wichtig: "runtime: static" = Static Site.
+# Static Sites bei Render sind gratis und schlafen NICHT ein
+# (nur Web Services tun das).
+# ===========================================
+services:
+  - type: web
+    name: ict-year2-portfolio
+    runtime: static
+    # Baut data/entries.json aus allen Dateien in data/entries/
+    buildCommand: node build.js
+    # Die Seite liegt im Repo-Hauptordner
+    staticPublishPath: .
+    # Bei jedem Push auf main (also auch bei jedem Speichern im CMS)
+    # wird automatisch neu deployed.
+    autoDeploy: true
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

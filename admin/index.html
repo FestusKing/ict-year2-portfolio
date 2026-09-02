@@ -1,26 +1,59 @@
 <!DOCTYPE html>
-<html>
+<html lang="de">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Content Management System</title>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <meta name="robots" content="noindex" />
+  <title>Portfolio bearbeiten</title>
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; }
+    #cms-fallback {
+      display: none;
+      max-width: 620px;
+      margin: 80px auto;
+      padding: 0 24px;
+      line-height: 1.6;
+      color: #222;
+    }
+    #cms-fallback code { background: #eee; padding: 2px 5px; border-radius: 4px; }
+  </style>
 </head>
 <body>
-  <!-- Decap CMS -->
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  <!-- Wird nur sichtbar, wenn Decap CMS nicht geladen werden konnte. -->
+  <div id="cms-fallback">
+    <h1>Der Editor konnte nicht geladen werden</h1>
+    <p>
+      Das CMS wird von <code>unpkg.com</code> nachgeladen. Wenn dein Netzwerk
+      (z.&nbsp;B. das Schul-WLAN) diese Adresse blockiert, erscheint diese Meldung.
+    </p>
+    <p><strong>Was du tun kannst:</strong></p>
+    <ul>
+      <li>Seite neu laden (Strg + F5)</li>
+      <li>Anderes Netz probieren, z.&nbsp;B. Handy-Hotspot</li>
+      <li>
+        Notfall-Weg: Eintrag direkt auf
+        <a href="https://github.com/FestusKing/ict-year2-portfolio/tree/main/data/entries">github.com</a>
+        im Web-Editor bearbeiten
+      </li>
+    </ul>
+    <p><a href="../">&larr; Zurück zum Portfolio</a></p>
+  </div>
 
-  <!-- Verknüpfung mit deiner Netlify-Instanz -->
+  <!--
+    Decap CMS. Die Einstellungen kommen automatisch aus admin/config.yml.
+    Login läuft über GitHub (siehe backend/base_url in der config.yml) --
+    ein Netlify-Identity-Skript ist dafür NICHT nötig.
+    Version fest angepinnt, damit ein neues Release nichts kaputt macht.
+  -->
+  <script src="https://unpkg.com/decap-cms@3.16.0/dist/decap-cms.js"></script>
   <script>
-    if (window.netlifyIdentity) {
-      window.netlifyIdentity.on("init", user => {
-        if (!user) {
-          window.netlifyIdentity.on("login", () => {
-            document.location.reload();
-          });
-        }
-      });
-    }
+    // Nach 8 Sekunden ohne geladenes CMS: Hinweis einblenden.
+    setTimeout(function () {
+      if (typeof window.CMS === "undefined") {
+        document.getElementById("cms-fallback").style.display = "block";
+      }
+    }, 8000);
   </script>
 </body>
 </html>

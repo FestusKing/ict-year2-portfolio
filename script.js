@@ -1,15 +1,18 @@
 // ===========================================
 // script.js
-// Lädt Portfolio-Einträge dynamisch aus data/entries/*.json (via GitHub API),
+// Lädt die Portfolio-Einträge aus data/entries.json (wird von build.js erzeugt),
 // baut die Übersichtsliste und zeigt bei Klick den vollen Eintrag an.
+//
+// Direkt-Links: jeder Eintrag hat eine eigene Adresse, z.B.
+//   .../#/eintrag/portfolio-entry-2
 // ===========================================
 
-// GitHub API URL, die den Inhalt des Ordners data/entries/ zurückgibt
-// (Liste aller Dateien mit Namen + Download-Link)
-const GITHUB_API_URL =
-  "https://api.github.com/repos/FestusKing/ict-year2-portfolio/contents/data/entries";
+// ---- Konfiguration ----
+const ENTRIES_URL = "data/entries.json";
+const ABOUT_URL = "data/about.json";
 
-// Referenzen auf die wichtigen HTML-Elemente holen
+// ---- Referenzen auf die wichtigen HTML-Elemente ----
+const introSection = document.getElementById("intro");
 const listSection = document.getElementById("entry-list");
 const detailSection = document.getElementById("entry-detail");
 const detailContent = document.getElementById("entry-detail-content");
@@ -18,51 +21,106 @@ const backButton = document.getElementById("back-button");
 // Hier landen die geladenen Einträge (am Anfang leer)
 let portfolioEntries = [];
 
-// ---- 0. Einträge von GitHub laden ----
+// ---- Markdown-Einstellungen ----
+// breaks: true  -> ein einfacher Zeilenumbruch bleibt ein Zeilenumbruch.
+//                  Sonst würden untereinander getippte Zeilen zu einem Block
+//                  zusammenfliessen, was man beim Schreiben nicht erwartet.
+// gfm: true     -> GitHub-Markdown (Listen, Tabellen, durchgestrichen ...)
+if (window.marked) {
+  marked.setOptions({ breaks: true, gfm: true });
+}
+
+// ---------------------------------------------------------------
+// Hilfsfunktionen
+// ---------------------------------------------------------------
+
+// Macht Text sicher für innerHTML (aus "<b>" wird "&lt;b&gt;").
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[char]));
+}
+
+// Wandelt Markdown in HTML um. Fällt auf einfache Absätze zurück,
+// falls marked.min.js einmal nicht geladen werden konnte.
+function renderMarkdown(text) {
+  const raw = String(text ?? "").trim();
+  if (!raw) return "<p><em>Für diesen Eintrag ist noch kein Text erfasst.</em></p>";
+  if (window.marked) return marked.parse(raw);
+  return raw
+    .split(/\n\s*\n/)
+    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+    .join("");
+}
+
+// Zeigt eine Fehlermeldung in der Übersicht an.
+function showError(message) {
+  listSection.innerHTML = `<p class="message message-error">${escapeHtml(message)}</p>`;
+}
+
+// ---------------------------------------------------------------
+// 1. Daten laden
+// ---------------------------------------------------------------
+
 async function loadEntries() {
-  listSection.innerHTML = `<p style="color:var(--text-muted)">Lade Einträge…</p>`;
+  listSection.innerHTML = `<p class="message">Lade Einträge…</p>`;
 
   try {
-    // Schritt 1: Liste aller Dateien im Ordner data/entries/ holen
-    const listResponse = await fetch(GITHUB_API_URL);
-    if (!listResponse.ok) {
-      throw new Error(`GitHub API antwortete mit Status ${listResponse.status}`);
+    const response = await fetch(ENTRIES_URL, { cache: "no-cache" });
+    if (!response.ok) {
+      throw new Error(`Server antwortete mit Status ${response.status}`);
     }
-    const files = await listResponse.json();
 
-    // Schritt 2: Nur .json Dateien behalten (falls z.B. ein Screenshot im Ordner landet)
-    const jsonFiles = files.filter((file) => file.name.endsWith(".json"));
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      throw new Error("data/entries.json enthält keine Liste von Einträgen");
+    }
 
-    // Schritt 3: Jede Datei einzeln herunterladen und als JSON parsen
-    // Promise.all lädt alle gleichzeitig statt nacheinander (schneller)
-    portfolioEntries = await Promise.all(
-      jsonFiles.map((file) => fetch(file.download_url).then((res) => res.json()))
-    );
+    // build.js sortiert bereits (neueste zuerst) und ergänzt den slug.
+    portfolioEntries = data;
 
-    // Schritt 4: Neueste zuerst anzeigen
-    portfolioEntries.sort((a, b) => parseGermanDate(b.date) - parseGermanDate(a.date));
-
-    // Schritt 5: Liste anzeigen
     renderEntryList();
+    handleRoute(); // falls die Seite direkt mit #/eintrag/... geöffnet wurde
   } catch (error) {
-    // Falls z.B. das GitHub API Rate Limit erreicht ist oder keine Internetverbindung besteht
-    listSection.innerHTML = `<p style="color:var(--accent)">Einträge konnten nicht geladen werden (${error.message}).</p>`;
+    showError(`Einträge konnten nicht geladen werden (${error.message}).`);
     console.error("Fehler beim Laden der Einträge:", error);
   }
 }
 
-// Wandelt "18.08.2026" (TT.MM.JJJJ) in ein echtes Date-Objekt um, zum Sortieren
-function parseGermanDate(dateStr) {
-  const [day, month, year] = dateStr.split(".");
-  return new Date(`${year}-${month}-${day}`);
+// Kurz-Vorstellung oben auf der Seite. Fehlt die Datei, bleibt der
+// Bereich einfach leer -- die Einträge sollen trotzdem funktionieren.
+async function loadAbout() {
+  try {
+    const response = await fetch(ABOUT_URL, { cache: "no-cache" });
+    if (!response.ok) return;
+
+    const about = await response.json();
+    const facts = [about.role, about.school, about.company].filter(Boolean);
+
+    introSection.innerHTML = `
+      <h2 class="intro-name">${escapeHtml(about.name || "")}</h2>
+      ${facts.length ? `<p class="intro-facts">${facts.map(escapeHtml).join(" · ")}</p>` : ""}
+      <div class="intro-text markdown-body">${renderMarkdown(about.intro)}</div>
+    `;
+    introSection.hidden = false;
+  } catch (error) {
+    console.warn("Kurz-Vorstellung konnte nicht geladen werden:", error);
+  }
 }
 
-// ---- 1. Übersichtsliste aufbauen ----
+// ---------------------------------------------------------------
+// 2. Übersichtsliste aufbauen
+// ---------------------------------------------------------------
+
 function renderEntryList() {
-  listSection.innerHTML = ""; // vorherigen Inhalt leeren
+  listSection.innerHTML = "";
 
   if (portfolioEntries.length === 0) {
-    listSection.innerHTML = `<p style="color:var(--text-muted)">Noch keine Einträge vorhanden.</p>`;
+    listSection.innerHTML = `<p class="message">Noch keine Einträge vorhanden.</p>`;
     return;
   }
 
@@ -70,70 +128,106 @@ function renderEntryList() {
     // Nummer formatieren: 1 -> "01", 2 -> "02", usw.
     const number = String(index + 1).padStart(2, "0");
 
-    // Karte (Card) für diesen Eintrag erstellen
-    const card = document.createElement("div");
+    // Als <a> statt <div>: Tastaturbedienung, Rechtsklick "Link kopieren"
+    // und der Browser-Zurück-Knopf funktionieren damit von selbst.
+    const card = document.createElement("a");
     card.className = "entry-card";
-    card.tabIndex = 0; // per Tastatur erreichbar (Barrierefreiheit)
-    card.setAttribute("role", "button");
+    card.href = `#/eintrag/${encodeURIComponent(entry.slug)}`;
 
     card.innerHTML = `
       <span class="entry-number">[${number}]</span>
-      <div class="entry-card-body">
-        <div class="entry-card-title">${entry.title}</div>
-        <div class="entry-card-teaser">${entry.teaser}</div>
-      </div>
-      <span class="entry-card-date">${entry.date}</span>
+      <span class="entry-card-body">
+        <span class="entry-card-title">${escapeHtml(entry.title || "Ohne Titel")}</span>
+        ${entry.teaser ? `<span class="entry-card-teaser">${escapeHtml(entry.teaser)}</span>` : ""}
+      </span>
+      <span class="entry-card-date">${escapeHtml(entry.date || "—")}</span>
     `;
-
-    // Klick -> Detailansicht öffnen
-    card.addEventListener("click", () => showEntryDetail(entry));
-    // Auch mit Enter-Taste öffnen können
-    card.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") showEntryDetail(entry);
-    });
 
     listSection.appendChild(card);
   });
 }
 
-// ---- 2. Detailansicht für einen Eintrag anzeigen ----
-function showEntryDetail(entry) {
-  // WICHTIG: body kommt aus dem CMS als EIN String mit Leerzeilen zwischen Absätzen
-  // (z.B. "Erster Absatz.\n\nZweiter Absatz."), nicht als Array.
-  // Deshalb hier zuerst bei Leerzeilen aufsplitten:
-  const paragraphs = entry.body.split(/\n\s*\n/);
-  const bodyHtml = paragraphs.map((paragraph) => `<p>${paragraph}</p>`).join("");
+// ---------------------------------------------------------------
+// 3. Detailansicht
+// ---------------------------------------------------------------
 
-  // Quellen-Liste bauen (falls vorhanden)
-  const sourcesHtml =
-    entry.sources && entry.sources.length
-      ? `<ul>${entry.sources.map((s) => `<li>${s}</li>`).join("")}</ul>`
-      : `<p>Keine externen Quellen verwendet.</p>`;
+function showEntryDetail(entry) {
+  const hasSources = Array.isArray(entry.sources) && entry.sources.length > 0;
+  const sourcesHtml = hasSources
+    ? `<ul>${entry.sources.map((source) => `<li>${escapeHtml(source)}</li>`).join("")}</ul>`
+    : `<p>Keine externen Quellen verwendet.</p>`;
+
+  const coverHtml = entry.cover
+    ? `<img class="detail-cover" src="${escapeHtml(entry.cover)}" alt="Bild zum Eintrag: ${escapeHtml(entry.title || "")}">`
+    : "";
 
   detailContent.innerHTML = `
-    <h2 class="detail-title">${entry.title}</h2>
-    <div class="detail-date">${entry.date}</div>
-    <div class="detail-body">${bodyHtml}</div>
+    <h2 class="detail-title">${escapeHtml(entry.title || "Ohne Titel")}</h2>
+    <div class="detail-date">${escapeHtml(entry.date || "Kein Datum angegeben")}</div>
+    ${coverHtml}
+    <div class="detail-body markdown-body">${renderMarkdown(entry.body)}</div>
     <div class="detail-sources">
       <strong>Quellen:</strong>
       ${sourcesHtml}
-      <p style="margin-top:10px;"><strong>KI-Einsatz:</strong> ${entry.aiUsage || "Nicht angegeben."}</p>
+      <p class="detail-ai"><strong>KI-Einsatz:</strong> ${escapeHtml(entry.aiUsage || "Nicht angegeben.")}</p>
     </div>
   `;
 
-  // Übersicht ausblenden, Detail einblenden
+  document.title = `${entry.title || "Eintrag"} — ICT Year 2 Portfolio`;
+
+  introSection.classList.add("hidden");
   listSection.classList.add("hidden");
   detailSection.classList.remove("hidden");
-
-  // Nach oben scrollen, damit man den Titel sofort sieht
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// ---- 3. Zurück-Button ----
-backButton.addEventListener("click", () => {
+function showList() {
+  document.title = "Andrej König — ICT Year 2 Portfolio";
+
   detailSection.classList.add("hidden");
+  introSection.classList.remove("hidden");
   listSection.classList.remove("hidden");
+}
+
+// ---------------------------------------------------------------
+// 4. Routing über die Adresszeile (#/eintrag/<slug>)
+// ---------------------------------------------------------------
+
+function handleRoute() {
+  const match = location.hash.match(/^#\/eintrag\/(.+)$/);
+
+  if (!match) {
+    showList();
+    return;
+  }
+
+  const slug = decodeURIComponent(match[1]);
+  const entry = portfolioEntries.find((item) => item.slug === slug);
+
+  if (entry) {
+    showEntryDetail(entry);
+  } else if (portfolioEntries.length > 0) {
+    // Link zeigt auf einen Eintrag, den es nicht (mehr) gibt:
+    // Liste normal zeigen und einen Hinweis darüber setzen.
+    showList();
+    renderEntryList();
+    listSection.insertAdjacentHTML(
+      "afterbegin",
+      `<p class="message message-error">Der Eintrag "${escapeHtml(slug)}" wurde nicht gefunden.</p>`
+    );
+  }
+  // Sind die Einträge noch nicht geladen, ruft loadEntries() handleRoute() erneut auf.
+}
+
+window.addEventListener("hashchange", handleRoute);
+
+backButton.addEventListener("click", () => {
+  location.hash = "#/";
 });
 
-// ---- 4. Beim Laden der Seite: Einträge von GitHub holen ----
+// ---------------------------------------------------------------
+// 5. Start
+// ---------------------------------------------------------------
+
+loadAbout();
 loadEntries();

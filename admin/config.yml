@@ -1,23 +1,116 @@
+# ===========================================
+# Decap CMS Konfiguration
+# Aufruf im Browser:  <deine-adresse>/admin/
+# ===========================================
+
 backend:
   name: github
-  repo: FestusKing/ict-year2-portfolio  # dein GitHub-Benutzername/Repo-Name
+  repo: FestusKing/ict-year2-portfolio   # dein GitHub-Benutzername/Repo-Name
   branch: main
-  base_url:  https://netlify-cms-github-oauth-provider-1yhz.onrender.com    # Netlify übernimmt nur den Login, nicht das Hosting
+  # Externer OAuth-Provider auf Render: übernimmt NUR den GitHub-Login,
+  # nicht das Hosting der Webseite.
+  base_url: https://netlify-cms-github-oauth-provider-1yhz.onrender.com
 
-media_folder: "images"   # Ordner für hochgeladene Bilder (optional nutzbar)
+# TODO: Sobald deine Render-Adresse feststeht, hier eintragen und die
+# beiden Zeilen einkommentieren. Dann bekommst du im CMS oben rechts
+# einen "Seite ansehen"-Knopf.
+# site_url: https://DEINE-ADRESSE.onrender.com
+# display_url: https://DEINE-ADRESSE.onrender.com
+
+media_folder: "images"     # hier landen hochgeladene Bilder im Repo
+public_folder: "/images"   # so wird der Pfad in die Einträge geschrieben
+
+# Deutsche Beschriftung der CMS-Oberfläche
+locale: "de"
 
 collections:
+  # ---------------------------------------------------------------
+  # 1. Die Portfolio-Einträge
+  # ---------------------------------------------------------------
   - name: "entries"
     label: "Portfolio Einträge"
+    label_singular: "Portfolio Eintrag"
     folder: "data/entries"
     create: true
     slug: "{{slug}}"
     extension: "json"
     format: "json"
+    summary: "{{date}} — {{title}}"
+    sortable_fields: ["date", "title"]
     fields:
-      - { label: "Titel", name: "title", widget: "string" }
-      - { label: "Datum", name: "date", widget: "string", hint: "Format: TT.MM.JJJJ" }
-      - { label: "Teaser (kurze Vorschau)", name: "teaser", widget: "string" }
-      - { label: "Text", name: "body", widget: "text", hint: "Leerzeile = neuer Absatz" }
-      - { label: "Quellen", name: "sources", widget: "list", default: [] }
-      - { label: "KI-Einsatz", name: "aiUsage", widget: "text", default: "" }
+      - label: "Titel"
+        name: "title"
+        widget: "string"
+        hint: "z.B. Portfolio Entry #3: My Complex Task"
+
+      - label: "Datum"
+        name: "date"
+        widget: "datetime"
+        date_format: "DD.MM.YYYY"
+        time_format: false
+        format: "DD.MM.YYYY"
+        hint: "Kalender anklicken – du musst nichts tippen."
+
+      - label: "Teaser (kurze Vorschau)"
+        name: "teaser"
+        widget: "string"
+        hint: "Ein Satz. Steht in der Übersichtsliste unter dem Titel."
+
+      - label: "Text"
+        name: "body"
+        widget: "markdown"
+        hint: "Mit den Knöpfen oben kannst du Fett, Überschriften, Listen und Links setzen."
+        buttons:
+          - bold
+          - italic
+          - heading-two
+          - heading-three
+          - bulleted-list
+          - numbered-list
+          - quote
+          - link
+          - code
+        editor_components:
+          - image
+          - code-block
+
+      - label: "Titelbild (optional)"
+        name: "cover"
+        widget: "image"
+        required: false
+        hint: "Screenshot oder Foto, wird oben im Eintrag angezeigt."
+
+      - label: "Quellen"
+        name: "sources"
+        widget: "list"
+        required: false
+        default: []
+        hint: "Pro Zeile eine Quelle. Leer lassen, wenn du keine benutzt hast."
+
+      - label: "KI-Einsatz"
+        name: "aiUsage"
+        widget: "text"
+        required: false
+        default: ""
+        hint: "Welche KI hast du wofür benutzt? (Bewertungskriterium des Lehrers!)"
+
+  # ---------------------------------------------------------------
+  # 2. Die Kurz-Vorstellung auf der Startseite
+  # ---------------------------------------------------------------
+  - name: "site"
+    label: "Startseite"
+    files:
+      - name: "about"
+        label: "Über mich"
+        file: "data/about.json"
+        format: "json"
+        fields:
+          - { label: "Name", name: "name", widget: "string" }
+          - { label: "Rolle", name: "role", widget: "string", required: false }
+          - { label: "Schule", name: "school", widget: "string", required: false }
+          - { label: "Lehrbetrieb / Abteilung", name: "company", widget: "string", required: false }
+          - label: "Vorstellungstext"
+            name: "intro"
+            widget: "markdown"
+            required: false
+            buttons: [bold, italic, link]

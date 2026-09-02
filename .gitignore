@@ -1,0 +1,9 @@
+# Wird bei jedem Build von build.js neu erzeugt -- nie von Hand bearbeiten.
+data/entries.json
+
+# Betriebssystem-Kram
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/

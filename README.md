@@ -89,17 +89,21 @@ Danach wird bei jedem Push auf `main` automatisch neu deployed.
 ## Wenn der CMS-Login nicht geht
 
 Der GitHub-Login läuft über einen eigenen kleinen Dienst auf Render
-(`netlify-cms-github-oauth-provider-...onrender.com`). Das ist ein
+(`portfolio-login.onrender.com`). Das ist ein
 Render **Web Service** — und die schlafen auf dem Gratis-Plan nach
 15 Minuten ohne Zugriff ein.
 
 - **Erster Login dauert lange (~50 s):** normal, der Dienst wacht auf. Warten, nicht abbrechen.
 - **Login schlägt fehl:** Seite neu laden und nochmal probieren.
+- **`portfolio-login.onrender.com` direkt im Browser zeigt einen Fehler
+  (401 / „Whitelabel Error Page"):** Das ist **kein** Defekt. Der Dienst ist keine
+  Webseite, er antwortet nur auf `/auth` und `/callback`. Dass überhaupt eine
+  Antwort kommt, heisst: er läuft.
 - **Geht gar nicht:** Notfall-Weg → Eintrag direkt auf github.com im Web-Editor
   bearbeiten (`data/entries/…json`). Auch das ist nicht VS Code.
 
 Zu prüfen, falls es dauerhaft klemmt:
 - GitHub → Settings → Developer settings → OAuth Apps:
-  **Authorization callback URL** = `https://netlify-cms-github-oauth-provider-1yhz.onrender.com/callback`
+  **Authorization callback URL** = `https://portfolio-login.onrender.com/callback`
 - Im Render-Dashboard beim OAuth-Provider: die Umgebungsvariable für erlaubte
   Domains/Origins muss deine Static-Site-Adresse enthalten.

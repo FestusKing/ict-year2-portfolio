@@ -9,7 +9,7 @@ backend:
   branch: main
   # Externer OAuth-Provider auf Render: übernimmt NUR den GitHub-Login,
   # nicht das Hosting der Webseite.
-  base_url: https://netlify-cms-github-oauth-provider-1yhz.onrender.com
+  base_url: https://portfolio-login.onrender.com
 
 # TODO: Sobald deine Render-Adresse feststeht, hier eintragen und die
 # beiden Zeilen einkommentieren. Dann bekommst du im CMS oben rechts

@@ -18,7 +18,7 @@ service cloud.firestore {
 
     function isTeacher() {
       return request.auth != null
-        && request.auth.token.email == 'lehrer@example.com';
+        && request.auth.token.email == 'joseph.heeg@tbz.ch';
     }
 
     function isMember() {

@@ -27,5 +27,5 @@ export const firebaseConfig = {
 //    sonst lässt Firebase die Person nicht rein.
 export const people = {
   "andrej.koenig@edu.tbz.ch": { name: "Andrej König", role: "admin" },
-  "lehrer@example.com": { name: "Mr Heeg", role: "teacher" },
+  "joseph.heeg@tbz.ch": { name: "Mr Heeg", role: "teacher" },
 };

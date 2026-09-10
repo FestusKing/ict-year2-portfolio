@@ -12,12 +12,12 @@
 //    Solange hier noch "DEIN_..." steht, läuft die Seite im Demo-Modus
 //    (alles wird nur im eigenen Browser gespeichert).
 export const firebaseConfig = {
-  apiKey: "DEIN_API_KEY",
-  authDomain: "DEIN_PROJEKT.firebaseapp.com",
-  projectId: "DEIN_PROJEKT",
-  storageBucket: "DEIN_PROJEKT.firebasestorage.app",
-  messagingSenderId: "000000000000",
-  appId: "DEINE_APP_ID",
+  apiKey: "AIzaSyAJ89rXll_iQyv9jded_DcrsDTNmkGAJbw",
+  authDomain: "ict-portfolio-3acc7.firebaseapp.com",
+  projectId: "ict-portfolio-3acc7",
+  storageBucket: "ict-portfolio-3acc7.firebasestorage.app",
+  messagingSenderId: "478386909815",
+  appId: "1:478386909815:web:6f66d291f6266fb1c88c72",
 };
 
 // 2. Wer darf was?

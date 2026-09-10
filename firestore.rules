@@ -13,7 +13,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return request.auth != null
-        && request.auth.token.email == 'amkoenig009@gmail.com';
+        && request.auth.token.email == 'andrej.koenig@edu.tbz.ch';
     }
 
     function isTeacher() {

@@ -26,6 +26,6 @@ export const firebaseConfig = {
 //    E-Mails KLEIN schreiben. Sie müssen genau gleich auch in firestore.rules stehen,
 //    sonst lässt Firebase die Person nicht rein.
 export const people = {
-  "amkoenig009@gmail.com": { name: "Andrej König", role: "admin" },
+  "andrej.koenig@edu.tbz.ch": { name: "Andrej König", role: "admin" },
   "lehrer@example.com": { name: "Mr Heeg", role: "teacher" },
 };

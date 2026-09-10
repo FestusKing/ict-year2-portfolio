@@ -71,8 +71,8 @@ Solange in `js/config.js` noch `DEIN_API_KEY` steht, läuft die Seite im **Demo-
 
 Sofort online – kein Warten, kein Deploy.
 
-Beim ersten Login erscheint ein grüner Kasten **„Von der alten Seite"** → *Übernehmen*.
-Dann sind deine bisherigen Einträge als Entwurf da. Danach kann `data/legacy-entries.json` gelöscht werden.
+Bilder werden beim Einfügen verkleinert und **einzeln** in Firebase gespeichert (Sammlung `images`) –
+im Eintrag steht nur ihre ID. Deshalb gibt es keine Grenze, wie viele Bilder ein Eintrag haben darf.
 
 ---
 
@@ -102,10 +102,9 @@ Nach Schritt 5 und 9 diese Nachricht in Teams schicken (oder anpassen):
 | `js/config.js` | **Firebase-Daten + wer darf was** – die einzige Datei zum Anpassen |
 | `js/app.js` | Ansichten: Übersicht, Eintrag, Editor, Login, Feedback |
 | `js/store.js` | Speichern + Login (Firebase oder Demo) |
-| `js/editor.js` | Texteditor + Bilder verkleinern |
+| `js/editor.js` | Texteditor, Bilder verkleinern und hochladen |
 | `firestore.rules` | Sicherheitsregeln (werden in der Firebase Console eingefügt) |
 | `vendor/` | Quill (Editor) und DOMPurify (Schutz vor Schad-Code), lokal statt CDN |
-| `data/legacy-entries.json` | Einträge der alten Seite, zum einmaligen Import |
 
 Die Firebase-Daten in `js/config.js` sind **kein Geheimnis** – sie stehen bei jeder
 Firebase-Webseite im Quelltext. Geschützt wird alles durch `firestore.rules`.
@@ -118,5 +117,6 @@ Firebase-Webseite im Quelltext. Geschützt wird alles durch `firestore.rules`.
   oder die Regeln wurden nach dem Ändern nicht neu veröffentlicht (Schritt 7).
 - **Login-Fenster sagt „unauthorized domain"** → Schritt 3 vergessen.
 - **„Wrong email or password"** → in Firebase unter *Authentication → Nutzer* prüfen, ob das Konto existiert.
-- **Eintrag zu gross** → Firebase erlaubt max. 1 MB pro Eintrag. Bilder werden automatisch verkleinert,
-  aber sehr viele Bilder in einem Eintrag gehen nicht.
+- **Bild wird nicht hochgeladen / „Keine Berechtigung"** → die neusten Regeln aus `firestore.rules`
+  sind noch nicht in Firebase veröffentlicht (Schritt 7).
+- **„Der Text ist zu lang"** → ein Eintrag darf ohne Bilder ca. 900'000 Zeichen haben. Auf zwei Einträge aufteilen.

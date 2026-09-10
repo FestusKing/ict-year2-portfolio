@@ -12,7 +12,7 @@
 // ===========================================
 
 import { people } from "./config.js";
-import { createStore, isDemo } from "./store.js";
+import { createStore, isDemo, imageIdsIn } from "./store.js";
 import { createEditor } from "./editor.js";
 
 const view = document.getElementById("view");
@@ -25,7 +25,7 @@ let routeToken = 0;          // verhindert, dass eine alte, langsame Ansicht ein
 let currentHash = location.hash;
 let ignoreNextHashChange = false;
 
-const LEAVE_WARNING = "Du hast ungespeicherte Änderungen. Trotzdem verlassen?";
+const LEAVE_WARNING = "Du hast ungespeicherte Änderungen. Wenn du jetzt weggehst, sind sie weg.";
 
 // ---------------------------------------------------------------
 // Hilfsfunktionen
@@ -78,7 +78,7 @@ function friendlyError(error) {
     "auth/user-disabled": "This account has been disabled.",
     "auth/too-many-requests": "Too many attempts. Please wait a moment and try again.",
     "auth/network-request-failed": "No connection. Please check your internet.",
-    "permission-denied": "Keine Berechtigung. Stimmen die E-Mails in js/config.js und firestore.rules überein?",
+    "permission-denied": "Keine Berechtigung. Sind die neusten Regeln in Firebase veröffentlicht (Firestore → Regeln)?",
     unavailable: "The database can't be reached right now. Please try again.",
   };
   return messages[error?.code] || error?.message || String(error);
@@ -102,6 +102,72 @@ function setupSanitizer() {
 }
 
 // ---------------------------------------------------------------
+// Eigene Dialoge statt confirm()/alert()
+// (die Browser-Fenster werden in manchen Browsern still blockiert –
+//  dann passiert beim Klick einfach nichts)
+// ---------------------------------------------------------------
+
+const dialog = document.createElement("dialog");
+dialog.className = "dialog";
+document.body.appendChild(dialog);
+
+// Frage stellen -> true (bestätigt) oder false (abgebrochen / Esc)
+function ask(message, { confirmLabel = "OK", cancelLabel = "Abbrechen", danger = false } = {}) {
+  return new Promise((resolve) => {
+    if (dialog.open) dialog.close();
+    dialog.innerHTML = `
+      <form method="dialog" class="dialog-body">
+        <p>${esc(message)}</p>
+        <div class="dialog-actions">
+          ${cancelLabel ? `<button class="btn" value="cancel">${esc(cancelLabel)}</button>` : ""}
+          <button class="btn ${danger ? "btn-danger-solid" : "btn-primary"}" value="ok">${esc(confirmLabel)}</button>
+        </div>
+      </form>
+    `;
+    dialog.returnValue = "";
+    dialog.addEventListener("close", () => resolve(dialog.returnValue === "ok"), { once: true });
+    dialog.showModal();
+    (dialog.querySelector('[value="cancel"]') || dialog.querySelector('[value="ok"]')).focus();
+  });
+}
+
+// Nur eine Meldung mit einem Knopf
+const notify = (message) => ask(message, { cancelLabel: "" });
+
+const confirmLeave = () => ask(LEAVE_WARNING, { confirmLabel: "Verwerfen", cancelLabel: "Weiter bearbeiten", danger: true });
+
+const confirmDelete = (title) =>
+  ask(`„${title}“ wirklich löschen? Das kann man nicht rückgängig machen.`, { confirmLabel: "Löschen", danger: true });
+
+// ---------------------------------------------------------------
+// Bilder (im Eintrag steht nur <img data-image-id="...">)
+// ---------------------------------------------------------------
+
+// Bilder in einem Bereich der Seite nachladen
+async function hydrateImages(root) {
+  if (!root) return;
+  const images = [...root.querySelectorAll("img[data-image-id]")];
+  await Promise.all(images.map(async (img) => {
+    try {
+      img.src = await store.getImage(img.dataset.imageId);
+    } catch (error) {
+      console.warn("Bild konnte nicht geladen werden:", error);
+      img.alt = "Image could not be loaded";
+      img.classList.add("img-missing");
+    }
+  }));
+}
+
+// Für den Editor: HTML mit echten Bildern statt nur IDs
+async function withImageSources(html) {
+  if (!html || !html.includes("data-image-id")) return html;
+  const template = document.createElement("template");
+  template.innerHTML = html;
+  await hydrateImages(template.content);
+  return template.innerHTML;
+}
+
+// ---------------------------------------------------------------
 // Kopfzeile: "Log in" oder Name + "Log out"
 // ---------------------------------------------------------------
 
@@ -121,7 +187,7 @@ function renderAuthArea() {
   `;
 
   document.getElementById("logout-btn").addEventListener("click", async () => {
-    if (dirty && !confirm(LEAVE_WARNING)) return;
+    if (dirty && !(await confirmLeave())) return;
     dirty = false;
     await store.logout();
     location.hash = "#/";
@@ -168,53 +234,10 @@ async function showList(isStale) {
       <h2>Entries<span class="count">${entries.length}</span></h2>
       ${isAdmin() ? `<a class="btn btn-primary" href="#/new">+ Neuer Eintrag</a>` : ""}
     </div>
-    <div id="import-slot"></div>
     ${entries.length
       ? `<ol class="entry-list">${cards}</ol>`
       : `<p class="empty">No entries yet.</p>`}
   `);
-
-  if (isAdmin()) offerImport(entries);
-}
-
-// Einträge der alten Webseite einmalig übernehmen (nur für dich sichtbar)
-async function offerImport(entries) {
-  let legacy = [];
-  try {
-    const response = await fetch("data/legacy-entries.json", { cache: "no-cache" });
-    if (response.ok) legacy = await response.json();
-  } catch {
-    return;
-  }
-
-  const existing = new Set(entries.map((entry) => entry.id));
-  const missing = legacy.filter((entry) => !existing.has(entry.id));
-  const slot = document.getElementById("import-slot");
-  if (!missing.length || !slot) return;
-
-  slot.innerHTML = `
-    <div class="notice">
-      <p>
-        <strong>Von der alten Seite:</strong> ${missing.map((entry) => esc(entry.title)).join(", ")}.
-        Wird als Entwurf übernommen (nur du siehst es).
-      </p>
-      <button class="btn btn-ok" id="import-btn" type="button">Übernehmen</button>
-    </div>
-  `;
-
-  document.getElementById("import-btn").addEventListener("click", async (event) => {
-    const button = event.currentTarget;
-    button.disabled = true;
-    button.textContent = "Übernehme…";
-    try {
-      for (const entry of missing) await store.importEntry(entry);
-      route();
-    } catch (error) {
-      button.disabled = false;
-      button.textContent = "Übernehmen";
-      alert(friendlyError(error));
-    }
-  });
 }
 
 // ---------------------------------------------------------------
@@ -286,6 +309,7 @@ async function showEntry(id, isStale) {
     ${feedback}
   `, entry.title);
 
+  hydrateImages(view.querySelector(".prose"));
   if (isAdmin()) wireAdminActions(entry);
   if (isMember()) wireFeedback(entry.id);
 }
@@ -296,7 +320,7 @@ function wireAdminActions(entry) {
       await store.saveEntry(entry.id, { ...entry, status });
       route();
     } catch (error) {
-      alert(friendlyError(error));
+      notify(friendlyError(error));
     }
   };
 
@@ -304,12 +328,12 @@ function wireAdminActions(entry) {
   document.getElementById("unpublish-btn")?.addEventListener("click", () => setStatus("draft"));
 
   document.getElementById("delete-btn").addEventListener("click", async () => {
-    if (!confirm(`„${entry.title}“ wirklich löschen? Das kann man nicht rückgängig machen.`)) return;
+    if (!(await confirmDelete(entry.title))) return;
     try {
       await store.deleteEntry(entry.id);
       location.hash = "#/";
     } catch (error) {
-      alert(friendlyError(error));
+      notify(friendlyError(error));
     }
   });
 }
@@ -346,12 +370,13 @@ async function loadFeedback(entryId) {
 
   list.querySelectorAll("[data-delete]").forEach((button) => {
     button.addEventListener("click", async () => {
-      if (!confirm("Delete this comment?")) return;
+      const sure = await ask("Delete this comment?", { confirmLabel: "Delete", cancelLabel: "Cancel", danger: true });
+      if (!sure) return;
       try {
         await store.deleteFeedback(entryId, button.dataset.delete);
         loadFeedback(entryId);
       } catch (error) {
-        alert(friendlyError(error));
+        notify(friendlyError(error));
       }
     });
   });
@@ -404,6 +429,10 @@ async function showEditor(id, isStale) {
     entry = found;
   }
 
+  // Bilder für den Editor laden (im Eintrag steht nur ihre ID)
+  const bodyWithImages = await withImageSources(entry.body);
+  if (isStale()) return;
+
   const cancelHref = id ? `#/entry/${encodeURIComponent(id)}` : "#/";
   const checked = (status) => (entry.status === status ? "checked" : "");
 
@@ -441,7 +470,8 @@ async function showEditor(id, isStale) {
       <div class="field">
         <label>Text</label>
         <div id="f-body"></div>
-        <p class="hint">Rot unterstrichen = Tippfehler. Rechtsklick darauf zeigt Vorschläge.</p>
+        <p class="upload-status" id="f-body-status" role="status" hidden></p>
+        <p class="hint">Rot unterstrichen = Tippfehler. Rechtsklick darauf zeigt Vorschläge. Bilder: Knopf oben, reinziehen oder Strg+V.</p>
       </div>
 
       <div class="field">
@@ -459,22 +489,43 @@ async function showEditor(id, isStale) {
       <div class="form-actions">
         <button class="btn btn-primary" type="submit">Speichern</button>
         <a class="btn" href="${cancelHref}">Abbrechen</a>
+        ${id ? `<button class="btn btn-danger form-actions-end" id="editor-delete" type="button">Löschen</button>` : ""}
       </div>
     </form>
   `, id ? "Bearbeiten" : "Neuer Eintrag");
 
   const form = document.getElementById("entry-form");
   const errorBox = document.getElementById("form-error");
-  const editor = createEditor(document.getElementById("f-body"), entry.body);
-
-  editor.onChange(() => { dirty = true; });
-  form.addEventListener("input", () => { dirty = true; });
+  const statusBox = document.getElementById("f-body-status");
 
   const fail = (message) => {
     errorBox.textContent = message;
     errorBox.hidden = false;
     errorBox.scrollIntoView({ behavior: "smooth", block: "center" });
   };
+
+  const editor = createEditor(document.getElementById("f-body"), bodyWithImages, {
+    uploadImage: (dataUrl) => store.uploadImage(dataUrl),
+    onStatus: (text) => {
+      statusBox.textContent = text;
+      statusBox.hidden = !text;
+    },
+    onError: (error, name) => fail(`Bild „${name}“ wurde nicht hochgeladen: ${friendlyError(error)}`),
+  });
+
+  editor.onChange(() => { dirty = true; });
+  form.addEventListener("input", () => { dirty = true; });
+
+  document.getElementById("editor-delete")?.addEventListener("click", async () => {
+    if (!(await confirmDelete(entry.title))) return;
+    try {
+      await store.deleteEntry(id);
+      dirty = false;
+      location.hash = "#/";
+    } catch (error) {
+      fail(friendlyError(error));
+    }
+  });
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -484,7 +535,7 @@ async function showEditor(id, isStale) {
       title: form.querySelector("#f-title").value.trim(),
       date: form.querySelector("#f-date").value,
       teaser: form.querySelector("#f-teaser").value.trim(),
-      body: editor.getHtml(),
+      body: "",
       sources: form.querySelector("#f-sources").value.split("\n").map((line) => line.trim()).filter(Boolean),
       aiUsage: form.querySelector("#f-ai").value.trim(),
       status: form.querySelector("input[name=status]:checked")?.value || "draft",
@@ -492,16 +543,25 @@ async function showEditor(id, isStale) {
 
     if (!data.title) return fail("Bitte einen Titel eingeben.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data.date)) return fail("Bitte ein Datum wählen.");
-    // Firebase erlaubt max. 1 MB pro Eintrag – Bilder sind der grösste Teil davon
-    if (data.body.length > 900_000) {
-      return fail("Der Eintrag ist zu gross – wahrscheinlich zu viele oder zu grosse Bilder. Bitte eins entfernen.");
-    }
 
     const button = form.querySelector("button[type=submit]");
     button.disabled = true;
     button.textContent = "Speichere…";
     try {
+      // Wartet auf laufende Bild-Uploads und lagert eingefügte Bilder aus
+      data.body = await editor.getHtml();
+      // Firebase erlaubt max. 1 MB pro Eintrag – ohne Bilder erreicht man das praktisch nie
+      if (data.body.length > 900_000) {
+        throw new Error("Der Text ist zu lang. Teile ihn bitte auf zwei Einträge auf.");
+      }
+
       const savedId = await store.saveEntry(id, data);
+
+      // Bilder, die du aus dem Eintrag entfernt hast, auch in Firebase löschen
+      const kept = new Set(imageIdsIn(data.body));
+      const removed = imageIdsIn(entry.body).filter((imageId) => !kept.has(imageId));
+      if (removed.length) store.deleteImages(removed).catch(() => {});
+
       dirty = false;
       location.hash = `#/entry/${encodeURIComponent(savedId)}`;
     } catch (error) {
@@ -658,14 +718,20 @@ async function route() {
 }
 
 // Wegnavigieren mit ungespeicherten Änderungen -> erst nachfragen
-window.addEventListener("hashchange", () => {
+window.addEventListener("hashchange", async () => {
   if (ignoreNextHashChange) {
     ignoreNextHashChange = false;
     return;
   }
-  if (dirty && !confirm(LEAVE_WARNING)) {
+  if (dirty) {
+    // Zuerst zurück in den Editor (ohne ihn neu zu laden), dann fragen
+    const target = location.hash;
     ignoreNextHashChange = true;
-    location.hash = currentHash; // zurück in den Editor, ohne ihn neu zu laden
+    location.hash = currentHash;
+    if (await confirmLeave()) {
+      dirty = false;
+      location.hash = target;
+    }
     return;
   }
   route();

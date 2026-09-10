@@ -33,7 +33,7 @@ function slugify(text) {
     .toLowerCase()
     .replace(/ß/g, "ss")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Akzente entfernen: é -> e
+    .replace(/\p{Diacritic}/gu, "") // Akzente entfernen: é -> e
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60)
@@ -45,6 +45,11 @@ function slugify(text) {
 function toDate(value) {
   if (value?.toDate) return value.toDate();
   return value ? new Date(value) : new Date();
+}
+
+// Alle Bild-IDs aus dem HTML eines Eintrags (<img data-image-id="...">)
+export function imageIdsIn(html) {
+  return [...String(html || "").matchAll(/data-image-id="([^"]+)"/g)].map((match) => match[1]);
 }
 
 export function createStore() {
@@ -66,9 +71,11 @@ async function createFirebaseStore() {
   const auth = fa.getAuth(app);
   const db = fs.getFirestore(app);
   let currentUser = null;
+  const imageCache = new Map(); // jedes Bild nur einmal laden
 
   const entryRef = (id) => fs.doc(db, "entries", id);
   const feedbackCol = (entryId) => fs.collection(db, "entries", entryId, "feedback");
+  const imageRef = (id) => fs.doc(db, "images", id);
 
   const fromSnap = (snap) => {
     const data = snap.data();
@@ -124,16 +131,15 @@ async function createFirebaseStore() {
       return newId;
     },
 
-    async importEntry(entry) {
-      if ((await fs.getDoc(entryRef(entry.id))).exists()) return;
-      const now = fs.serverTimestamp();
-      await fs.setDoc(entryRef(entry.id), { ...pickEntryFields(entry), createdAt: now, updatedAt: now });
-    },
-
     async deleteEntry(id) {
-      // Zuerst das Feedback darunter löschen, sonst bleibt es verwaist in der Datenbank
+      // Zuerst Feedback und Bilder des Eintrags löschen, sonst bleiben sie verwaist in der Datenbank
+      const snap = await fs.getDoc(entryRef(id));
+      const imageIds = snap.exists() ? imageIdsIn(snap.data().body) : [];
       const feedback = await fs.getDocs(feedbackCol(id));
-      await Promise.all(feedback.docs.map((d) => fs.deleteDoc(d.ref)));
+      await Promise.all([
+        ...feedback.docs.map((d) => fs.deleteDoc(d.ref)),
+        ...imageIds.map((imageId) => fs.deleteDoc(imageRef(imageId)).catch(() => {})),
+      ]);
       await fs.deleteDoc(entryRef(id));
     },
 
@@ -154,6 +160,28 @@ async function createFirebaseStore() {
     },
 
     deleteFeedback: (entryId, feedbackId) => fs.deleteDoc(fs.doc(db, "entries", entryId, "feedback", feedbackId)),
+
+    // ---- Bilder: jedes Bild ist ein eigenes Objekt in der Sammlung "images" ----
+
+    async uploadImage(dataUrl) {
+      const ref = await fs.addDoc(fs.collection(db, "images"), { data: dataUrl, createdAt: fs.serverTimestamp() });
+      imageCache.set(ref.id, Promise.resolve(dataUrl));
+      return ref.id;
+    },
+
+    getImage(id) {
+      if (!imageCache.has(id)) {
+        const loading = fs.getDoc(imageRef(id)).then((snap) => {
+          if (!snap.exists()) throw new Error("Bild nicht gefunden");
+          return snap.data().data;
+        });
+        loading.catch(() => imageCache.delete(id)); // beim nächsten Mal nochmal versuchen
+        imageCache.set(id, loading);
+      }
+      return imageCache.get(id);
+    },
+
+    deleteImages: (ids) => Promise.all(ids.map((id) => fs.deleteDoc(imageRef(id)).catch(() => {}))),
   };
 }
 
@@ -164,22 +192,29 @@ async function createFirebaseStore() {
 function createDemoStore() {
   const DATA_KEY = "portfolio-demo-data";
   const USER_KEY = "portfolio-demo-user";
+  const IMAGES_KEY = "portfolio-demo-images";
+  const FULL = "Der Browser-Speicher ist voll (Demo-Modus). Bitte ein Bild entfernen.";
 
-  const load = () => {
+  const read = (key, fallback) => {
     try {
-      return JSON.parse(localStorage.getItem(DATA_KEY)) || { entries: {}, feedback: {} };
+      return JSON.parse(localStorage.getItem(key)) || fallback;
     } catch {
-      return { entries: {}, feedback: {} };
+      return fallback;
     }
   };
 
-  const save = (data) => {
+  const write = (key, value) => {
     try {
-      localStorage.setItem(DATA_KEY, JSON.stringify(data));
+      localStorage.setItem(key, JSON.stringify(value));
     } catch {
-      throw new Error("Der Browser-Speicher ist voll (Demo-Modus). Bitte ein Bild entfernen.");
+      throw new Error(FULL);
     }
   };
+
+  const load = () => read(DATA_KEY, { entries: {}, feedback: {} });
+  const save = (data) => write(DATA_KEY, data);
+  const loadImages = () => read(IMAGES_KEY, {});
+  const saveImages = (images) => write(IMAGES_KEY, images);
 
   let current = null;
   let listener = () => {};
@@ -253,16 +288,11 @@ function createDemoStore() {
       return id;
     },
 
-    async importEntry(entry) {
-      const all = load();
-      if (all.entries[entry.id]) return;
-      const now = new Date().toISOString();
-      all.entries[entry.id] = { id: entry.id, ...pickEntryFields(entry), createdAt: now, updatedAt: now };
-      save(all);
-    },
-
     async deleteEntry(id) {
       const all = load();
+      const images = loadImages();
+      imageIdsIn(all.entries[id]?.body).forEach((imageId) => delete images[imageId]);
+      saveImages(images);
       delete all.entries[id];
       delete all.feedback[id];
       save(all);
@@ -288,6 +318,26 @@ function createDemoStore() {
       const all = load();
       all.feedback[entryId] = (all.feedback[entryId] || []).filter((f) => f.id !== feedbackId);
       save(all);
+    },
+
+    async uploadImage(dataUrl) {
+      const images = loadImages();
+      const id = newId();
+      images[id] = dataUrl;
+      saveImages(images);
+      return id;
+    },
+
+    async getImage(id) {
+      const data = loadImages()[id];
+      if (!data) throw new Error("Bild nicht gefunden");
+      return data;
+    },
+
+    async deleteImages(ids) {
+      const images = loadImages();
+      ids.forEach((id) => delete images[id]);
+      saveImages(images);
     },
   };
 }

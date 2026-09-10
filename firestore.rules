@@ -59,6 +59,18 @@ service cloud.firestore {
       }
     }
 
+    // Bilder: jedes Bild ist ein eigenes Objekt (max. 1 MB)
+    match /images/{imageId} {
+      allow get: if true;     // wer die ID kennt (sie steht im Eintrag), darf das Bild sehen
+      allow list: if false;   // aber niemand kann alle Bilder auflisten
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly(['data', 'createdAt'])
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 1000000
+        && request.resource.data.createdAt == request.time;
+      allow delete: if isAdmin();
+    }
+
     // Alles andere ist gesperrt (Firestore verbietet standardmässig alles, was hier nicht erlaubt ist)
   }
 }

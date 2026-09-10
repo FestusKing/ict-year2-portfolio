@@ -203,7 +203,7 @@ const INTRO = `
     <p class="eyebrow">ICT English · Year 2 · TBZ Zürich</p>
     <h1>Hi, I'm Andrej.</h1>
     <p>
-      My name is Andrej König. I live in Switzerland, in the city of Winterthur. I work as an ICT-Fachmann at Quellenhof-Stiftung, and I am in my second year of my apprenticeship. I play golf and like to go to the gym, and I attend the school TBZ. 
+      My name is Andrej König. I live in Switzerland, in the city of Winterthur. I work as an ICT-Fachmann at Quellenhof-Stiftung and PVComp, and I am in my second year of my apprenticeship. I play golf and like to go to the gym, and I attend the school TBZ. 
 
       Yeah, that's me. I hope you like my portfolio entry! :) 
     </p>

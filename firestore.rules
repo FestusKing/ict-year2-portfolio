@@ -1,0 +1,64 @@
+rules_version = '2';
+
+// ===========================================
+// Firestore-Regeln — DAS ist der eigentliche Schutz der Seite.
+// Firebase prüft sie auf dem Server, egal was jemand im Browser macht.
+//
+// Einfügen: Firebase Console -> Firestore Database -> Regeln -> alles ersetzen -> Veröffentlichen
+// Die E-Mails müssen genau so auch in js/config.js stehen (klein geschrieben!).
+// ===========================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email == 'amkoenig009@gmail.com';
+    }
+
+    function isTeacher() {
+      return request.auth != null
+        && request.auth.token.email == 'lehrer@example.com';
+    }
+
+    function isMember() {
+      return isAdmin() || isTeacher();
+    }
+
+    // So muss ein Eintrag aussehen – alles andere wird abgelehnt
+    function isValidEntry(entry) {
+      return entry.keys().hasOnly(['title', 'date', 'teaser', 'body', 'sources', 'aiUsage', 'status', 'createdAt', 'updatedAt'])
+        && entry.title is string && entry.title.size() > 0 && entry.title.size() <= 200
+        && entry.date is string && entry.date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+        && entry.teaser is string && entry.teaser.size() <= 300
+        && entry.body is string
+        && entry.sources is list
+        && entry.aiUsage is string
+        && entry.status in ['draft', 'published'];
+    }
+
+    match /entries/{entryId} {
+      // Veröffentlichte Einträge: für alle lesbar. Entwürfe: nur für dich.
+      allow read: if resource.data.status == 'published' || isAdmin();
+      allow create, update: if isAdmin() && isValidEntry(request.resource.data);
+      allow delete: if isAdmin();
+
+      // Feedback: nur du und der Lehrer
+      match /feedback/{feedbackId} {
+        allow read: if isMember();
+        allow create: if isMember()
+          && request.resource.data.keys().hasOnly(['text', 'authorEmail', 'authorName', 'createdAt'])
+          && request.resource.data.authorEmail == request.auth.token.email
+          && request.resource.data.authorName is string
+          && request.resource.data.text is string
+          && request.resource.data.text.size() > 0
+          && request.resource.data.text.size() <= 5000
+          && request.resource.data.createdAt == request.time;
+        allow delete: if isAdmin()
+          || (isMember() && resource.data.authorEmail == request.auth.token.email);
+      }
+    }
+
+    // Alles andere ist gesperrt (Firestore verbietet standardmässig alles, was hier nicht erlaubt ist)
+  }
+}

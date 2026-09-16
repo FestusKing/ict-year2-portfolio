@@ -4,13 +4,13 @@ Portfolio-Webseite für ICT English Year 2 (TBZ Zürich, Joseph Heeg).
 
 **Adresse:** https://festusking.github.io/ict-year2-portfolio/
 
-| Wer | Was | Login? |
-|---|---|---|
-| Alle | Veröffentlichte Einträge lesen | nein |
-| **Du** (Admin) | Einträge schreiben, bearbeiten, löschen, Entwürfe | ja |
-| **Lehrer** | Alles lesen + Feedback unter jedem Eintrag | ja |
+| Wer | Was |
+|---|---|
+| **Du** (Admin) | Einträge schreiben, bearbeiten, löschen, Entwürfe |
+| **Lehrer** | Veröffentlichte Einträge lesen + Feedback |
+| Alle anderen | nichts – nur die Login-Seite |
 
-Feedback sehen nur du und der Lehrer. Entwürfe siehst nur du.
+Die Seite ist **privat**: Ohne Login sieht man nur die Login-Seite. Entwürfe siehst nur du.
 
 ---
 
@@ -84,9 +84,9 @@ Nach Schritt 5 und 9 diese Nachricht in Teams schicken (oder anpassen):
 >
 > here is my Year 2 portfolio: https://festusking.github.io/ict-year2-portfolio/
 >
-> You can read it without an account. If you'd like to leave feedback on an entry,
-> I've created a login for you: click **Log in** → **Forgot password? / First time here?**,
-> enter your school email address and you'll receive a link to set your own password.
+> The portfolio is private, so I've created a login for you: open the link, click
+> **Forgot password? / First time here?**, enter your school email address and you'll
+> receive a link to set your own password. After logging in you can also leave feedback.
 >
 > Best regards,
 > Andrej

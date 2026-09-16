@@ -101,7 +101,7 @@ async function createFirebaseStore() {
     resetPassword: (email) => fa.sendPasswordResetEmail(auth, email.trim()),
 
     async listEntries() {
-      // Gäste und Lehrer dürfen laut firestore.rules nur Veröffentlichtes abfragen
+      // Der Lehrer darf laut firestore.rules nur Veröffentlichtes abfragen
       const col = fs.collection(db, "entries");
       const q = currentUser?.role === "admin" ? col : fs.query(col, fs.where("status", "==", "published"));
       const snap = await fs.getDocs(q);
@@ -237,7 +237,8 @@ function createDemoStore() {
   };
 
   const withDates = (entry) => ({ ...entry, createdAt: toDate(entry.createdAt), updatedAt: toDate(entry.updatedAt) });
-  const canSee = (entry) => entry.status === "published" || current?.role === "admin";
+  // wie firestore.rules: du siehst alles, der Lehrer nur Veröffentlichtes, sonst niemand etwas
+  const canSee = (entry) => current?.role === "admin" || (current?.role === "teacher" && entry.status === "published");
   const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
   return {

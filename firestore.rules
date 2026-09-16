@@ -38,8 +38,8 @@ service cloud.firestore {
     }
 
     match /entries/{entryId} {
-      // Veröffentlichte Einträge: für alle lesbar. Entwürfe: nur für dich.
-      allow read: if resource.data.status == 'published' || isAdmin();
+      // Privat: du siehst alles, der Lehrer nur Veröffentlichtes, sonst niemand etwas
+      allow read: if isAdmin() || (isTeacher() && resource.data.status == 'published');
       allow create, update: if isAdmin() && isValidEntry(request.resource.data);
       allow delete: if isAdmin();
 
@@ -61,7 +61,7 @@ service cloud.firestore {
 
     // Bilder: jedes Bild ist ein eigenes Objekt (max. 1 MB)
     match /images/{imageId} {
-      allow get: if true;     // wer die ID kennt (sie steht im Eintrag), darf das Bild sehen
+      allow get: if isMember(); // nur du und der Lehrer
       allow list: if false;   // aber niemand kann alle Bilder auflisten
       allow create: if isAdmin()
         && request.resource.data.keys().hasOnly(['data', 'createdAt'])

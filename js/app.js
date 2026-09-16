@@ -593,7 +593,7 @@ function showLogin() {
   render(`
     <div class="login">
       <h1>Log in</h1>
-      <p class="muted">For Andrej and his teacher. Everyone can read the portfolio without logging in.</p>
+      <p class="muted">This portfolio is private. Please log in to read it.</p>
       ${demoButtons}
       <form id="login-form" class="form">
         <div class="field">
@@ -667,6 +667,22 @@ function showLogin() {
 // Nicht gefunden / Fehler
 // ---------------------------------------------------------------
 
+// Eingeloggt, aber mit einem Konto ohne Rolle (nicht du, nicht der Lehrer)
+function showNoAccess() {
+  render(`
+    <div class="state">
+      <h1>No access</h1>
+      <p class="muted">You are logged in as ${esc(user.email)}, but this account has no access to the portfolio.</p>
+      <button class="btn" id="noaccess-logout" type="button">Log out</button>
+    </div>
+  `, "No access");
+
+  document.getElementById("noaccess-logout").addEventListener("click", async () => {
+    await store.logout();
+    location.hash = "#/login";
+  });
+}
+
 function showNotFound() {
   render(`
     <div class="state">
@@ -704,6 +720,12 @@ async function route() {
   const isStale = () => token !== routeToken;
   currentHash = location.hash;
   dirty = false;
+
+  // Privat: ohne Login sieht man nur die Login-Seite, ohne Rolle nur "No access".
+  // Die Adresse bleibt stehen – nach dem Login geht's genau dorthin.
+  if (!isMember() && location.hash !== "#/login") {
+    return user ? showNoAccess() : showLogin();
+  }
 
   const hash = location.hash || "#/";
   const found = routes.find(([pattern]) => pattern.test(hash));
